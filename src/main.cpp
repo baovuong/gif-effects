@@ -1,7 +1,15 @@
 #include <chrono>
 #include <iostream>
 #include <random>
+#include <tuple>
 #include <vector>
+
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+
+#include <unistd.h>
+
 #include <Magick++.h>
 
 
@@ -9,18 +17,47 @@ using namespace std;
 using namespace Magick;
 
 
-/**
- * @brief 
- * 
- * @param image 
- * @param interval 
- * @param frames 
- */
-vector<Image> shake(Image* image, int interval, int numFrames) {
-    image->pixelColor(50, 50, Color("blue"));
-    vector<Image> images;
+struct point {
+    int x;
+    int y;
+};
 
-    return images;
+point createPoint(double radius, double angle) {
+    point result = {
+        (int)(radius * cos(angle)),
+        (int)(radius * sin(angle))
+    };
+
+    return result;
+}
+
+
+vector<Image> shake(Image* image, int interval, int points, double radius) {
+    vector<Image> frames(points);
+
+    Blob blob;
+    image->magick("PNG");
+    image->write(&blob);
+
+    for (int i=0; i<points; i++) {
+        point p = createPoint(radius, i*2*M_PI/points);
+        cout << p.x << ", " << p.y << endl;
+        Image frame(blob);
+        frame.page(Geometry(image->size().width(), image->size().height(), p.x, p.y));
+        frame.crop(Geometry(
+            image->size().width() - radius,
+            image->size().height() - radius, 
+            radius/2, 
+            radius/2));
+        frame.size(Geometry(image->size().width() - radius, image->size().height() - radius));
+
+        frames[i] = frame;
+        frame.animationDelay(interval);
+    }
+
+    srand ( unsigned ( time(0) ) );
+    random_shuffle(frames.begin(), frames.end());
+    return frames;
 }
 
 vector<int> randomNumbers(int num) {
@@ -37,16 +74,56 @@ vector<int> randomNumbers(int num) {
 
 
 int main(int argc, char **argv) {
-    
-    Image image("640x480", "red");
-    shake(&image, 100, 20);
-    image.magick("png");                   
-    image.write("thing.png");
+    char* inputPath = NULL;
+    char* outputPath = NULL;
+    int interval = 1000;
+    int points = 5;
+    int radius = 20;
+    int c;
 
-    vector<int> numbers = randomNumbers(5);
-    for (auto &number : numbers) {
-        cout << number << endl;
+    int requirementCount = 0;
+
+    opterr = 0;
+
+    while ((c = getopt(argc, argv, "t:n:r:i:o:")) != -1) {
+        switch (c) {
+            case 't':
+                interval = atoi(optarg);
+                break;
+            case 'n':
+                points = atoi(optarg);
+                break;
+            case 'r':
+                radius = atoi(optarg);
+                break;
+            case 'i':
+                inputPath = optarg;
+                requirementCount++;
+                break;
+            case 'o':
+                outputPath = optarg;
+                requirementCount++;
+                break;
+            case '?':
+                if (optopt != 0 && strchr("tnrio", optopt) != NULL) {
+                    cerr << "Option -" << (int)optopt << " requires an argument" << endl;
+                    return 1;
+                }
+                break;
+            case ':':
+                break;
+            default:
+                abort ();
+        }
     }
 
+    if (requirementCount < 2) {
+        cerr << "insufficient arguments" << endl;
+        return 1;
+    }
+
+    Image image(inputPath);
+    vector<Image> frames = shake(&image, interval, points, radius);
+    writeImages(frames.begin(), frames.end(), outputPath);
     return 0;
 }
