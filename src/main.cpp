@@ -43,20 +43,26 @@ vector<Image> shake(Image* image, int interval, int points, double radius) {
         point p = createPoint(radius, i*2*M_PI/points);
         cout << p.x << ", " << p.y << endl;
         Image frame(blob);
-        frame.page(Geometry(image->size().width(), image->size().height(), p.x, p.y));
+
+        
+
         frame.crop(Geometry(
-            image->size().width() - radius,
-            image->size().height() - radius, 
-            radius/2, 
-            radius/2));
-        frame.size(Geometry(image->size().width() - radius, image->size().height() - radius));
+            image->size().width()/2,
+            image->size().height()/2, 
+            image->size().width()/4 + p.x, 
+            image->size().width()/4 + p.y));
+        frame.page(Geometry(
+            image->size().width()/2, 
+            image->size().height()/2, 
+            0, 
+            0));
 
         frames[i] = frame;
         frame.animationDelay(interval);
     }
 
-    srand ( unsigned ( time(0) ) );
-    random_shuffle(frames.begin(), frames.end());
+    //srand ( unsigned ( time(0) ) );
+    //random_shuffle(frames.begin(), frames.end());
     return frames;
 }
 
