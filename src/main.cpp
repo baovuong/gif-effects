@@ -12,59 +12,10 @@
 
 #include <Magick++.h>
 
+#include "image_effects.h"
 
 using namespace std;
 using namespace Magick;
-
-
-struct point {
-    int x;
-    int y;
-};
-
-point createPoint(double radius, double angle) {
-    point result = {
-        (int)(radius * cos(angle)),
-        (int)(radius * sin(angle))
-    };
-
-    return result;
-}
-
-
-vector<Image> shake(Image* image, int interval, int points, double radius) {
-    vector<Image> frames(points);
-
-    Blob blob;
-    image->magick("PNG");
-    image->write(&blob);
-
-    for (int i=0; i<points; i++) {
-        point p = createPoint(radius, i*2*M_PI/points);
-        cout << p.x << ", " << p.y << endl;
-        Image frame(blob);
-
-        
-
-        frame.crop(Geometry(
-            image->size().width()/2,
-            image->size().height()/2, 
-            image->size().width()/4 + p.x, 
-            image->size().width()/4 + p.y));
-        frame.page(Geometry(
-            image->size().width()/2, 
-            image->size().height()/2, 
-            0, 
-            0));
-
-        frames[i] = frame;
-        frame.animationDelay(interval);
-    }
-
-    //srand ( unsigned ( time(0) ) );
-    //random_shuffle(frames.begin(), frames.end());
-    return frames;
-}
 
 vector<int> randomNumbers(int num) {
     vector<int> output(num);
